@@ -2,1428 +2,249 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Kutuplara Yolculuk | Bilim Diplomasisi Parkuru</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <style>
-    :root {
-      --night: #07111f;
-      --ink: #0f172a;
-      --panel: rgba(248, 252, 255, 0.96);
-      --cyan: #10b8e8;
-      --blue: #1265b8;
-      --green: #18a957;
-      --red: #dc2626;
-      --gold: #f7c948;
-    }
-
-    * { box-sizing: border-box; }
-
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      font-family: Inter, "Segoe UI", Arial, sans-serif;
-      background: var(--night) url("assets/background.png") center / cover no-repeat;
-      color: var(--ink);
-      touch-action: none;
-    }
-
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background:
-        linear-gradient(180deg, rgba(3, 10, 23, 0.24), rgba(3, 10, 23, 0.70)),
-        radial-gradient(circle at 18% 16%, rgba(74, 222, 255, 0.23), transparent 34%),
-        radial-gradient(circle at 78% 18%, rgba(255, 231, 145, 0.14), transparent 30%);
-      z-index: 1;
-    }
-
-    #ambient-video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.42;
-      filter: saturate(1.1) contrast(1.05);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    #game-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-    }
-
-    #ui-layer {
-      position: fixed;
-      inset: 0;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    .panel {
-      pointer-events: auto;
-      position: absolute;
-      display: none;
-      opacity: 0;
-      color: var(--ink);
-      background: var(--panel);
-      border: 2px solid rgba(80, 205, 245, 0.88);
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
-      backdrop-filter: blur(14px);
-      transition: opacity 0.22s ease, transform 0.22s ease;
-    }
-
-    .panel.active {
-      display: block;
-      opacity: 1;
-    }
-
-    #start-panel,
-    #game-over-panel {
-      left: 50%;
-      top: 50%;
-      width: min(680px, calc(100vw - 28px));
-      max-height: calc(100vh - 28px);
-      overflow: auto;
-      padding: clamp(20px, 4vw, 36px);
-      border-radius: 18px;
-      text-align: center;
-      transform: translate(-50%, -50%) scale(0.96);
-    }
-
-    #start-panel.active,
-    #game-over-panel.active {
-      transform: translate(-50%, -50%) scale(1);
-    }
-
-    .brand-kicker {
-      margin: 0 0 10px;
-      font-size: 0.84rem;
-      font-weight: 900;
-      color: var(--blue);
-      letter-spacing: 0;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(2rem, 6vw, 4.2rem);
-      line-height: 0.95;
-      font-weight: 950;
-      color: #073763;
-    }
-
-    .subtitle {
-      margin: 12px auto 22px;
-      max-width: 560px;
-      color: #25415f;
-      font-size: clamp(1rem, 2.3vw, 1.22rem);
-      line-height: 1.45;
-      font-weight: 650;
-    }
-
-    .name-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: stretch;
-      margin-top: 18px;
-    }
-
-    input {
-      width: 100%;
-      min-height: 54px;
-      border: 2px solid rgba(14, 165, 233, 0.32);
-      border-radius: 10px;
-      padding: 0 15px;
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--ink);
-      background: #f8fbff;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 4px rgba(16, 184, 232, 0.16);
-    }
-
-    button {
-      border: 0;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: inherit;
-      font-weight: 900;
-    }
-
-    .primary-btn {
-      min-height: 54px;
-      padding: 0 22px;
-      color: #fff;
-      background: linear-gradient(135deg, #0f8fd6, #0d65b7);
-      box-shadow: 0 12px 24px rgba(13, 101, 183, 0.30);
-      white-space: nowrap;
-      transition: transform 0.16s ease, filter 0.16s ease;
-    }
-
-    .primary-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
-    .primary-btn:active { transform: translateY(1px); }
-
-    #hud {
-      pointer-events: none;
-      position: absolute;
-      left: 16px;
-      top: 16px;
-      display: none;
-      width: min(330px, calc(100vw - 32px));
-      padding: 14px;
-      color: #fff;
-      background: rgba(5, 15, 31, 0.78);
-      border: 1px solid rgba(125, 211, 252, 0.65);
-      border-radius: 14px;
-      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
-      backdrop-filter: blur(12px);
-    }
-
-    #hud.active { display: block; }
-
-    .hud-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .timer {
-      font-size: 2rem;
-      line-height: 1;
-      color: var(--gold);
-      font-weight: 950;
-      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.34);
-    }
-
-    .timer.warning {
-      color: #ff7474;
-      animation: blink 0.8s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-      50% { opacity: 0.55; }
-    }
-
-    .progress-label {
-      color: #c7ecff;
-      font-size: 0.9rem;
-      font-weight: 850;
-      text-align: right;
-    }
-
-    .progress-track {
-      height: 12px;
-      margin-top: 12px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.32);
-    }
-
-    #progress-fill {
-      width: 0%;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #34d399, #38bdf8, #facc15);
-      transition: width 0.35s ease;
-    }
-
-    .controls-note {
-      margin-top: 8px;
-      color: #d7f5ff;
-      font-size: 0.78rem;
-      font-weight: 650;
-    }
-
-    #quiz-panel {
-      right: 18px;
-      top: 50%;
-      width: min(460px, calc(100vw - 36px));
-      max-height: calc(100vh - 36px);
-      overflow: auto;
-      padding: 20px;
-      border-radius: 16px;
-      transform: translateY(-50%) scale(0.96);
-    }
-
-    #quiz-panel.active {
-      transform: translateY(-50%) scale(1);
-    }
-
-    #quiz-title {
-      margin: 0 0 10px;
-      color: #075985;
-      font-size: 1.1rem;
-      font-weight: 950;
-    }
-
-    #quiz-text {
-      margin: 0 0 14px;
-      color: #172033;
-      font-size: 1rem;
-      line-height: 1.48;
-      font-weight: 760;
-    }
-
-    #quiz-choices {
-      display: grid;
-      gap: 9px;
-    }
-
-    .choice-btn {
-      width: 100%;
-      min-height: 56px;
-      padding: 12px 14px;
-      border: 2px solid rgba(14, 116, 144, 0.12);
-      border-radius: 9px;
-      color: #162135;
-      background: #f4f8fb;
-      text-align: left;
-      font-size: 0.94rem;
-      line-height: 1.32;
-      transition: transform 0.14s ease, background 0.14s ease, border-color 0.14s ease;
-    }
-
-    .choice-btn:hover {
-      transform: translateX(3px);
-      background: #e8f7ff;
-      border-color: rgba(14, 165, 233, 0.48);
-    }
-
-    .choice-btn.correct {
-      color: #fff;
-      background: var(--green);
-      border-color: #0f8b45;
-    }
-
-    .choice-btn.wrong {
-      color: #fff;
-      background: var(--red);
-      border-color: #991b1b;
-      animation: shake 0.32s;
-    }
-
-    @keyframes shake {
-      25% { transform: translateX(-5px); }
-      50% { transform: translateX(5px); }
-      75% { transform: translateX(-3px); }
-    }
-
-    #touch-controls {
-      pointer-events: auto;
-      position: absolute;
-      right: 18px;
-      bottom: 18px;
-      display: none;
-      grid-template-columns: repeat(3, 52px);
-      grid-template-rows: repeat(2, 52px);
-      gap: 8px;
-    }
-
-    #touch-controls.active { display: grid; }
-
-    .touch-btn {
-      width: 52px;
-      height: 52px;
-      color: #fff;
-      background: rgba(7, 17, 31, 0.68);
-      border: 1px solid rgba(125, 211, 252, 0.55);
-      border-radius: 50%;
-      font-size: 1.2rem;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
-      backdrop-filter: blur(8px);
-    }
-
-    .touch-btn[data-key="up"] { grid-column: 2; grid-row: 1; }
-    .touch-btn[data-key="left"] { grid-column: 1; grid-row: 2; }
-    .touch-btn[data-key="down"] { grid-column: 2; grid-row: 2; }
-    .touch-btn[data-key="right"] { grid-column: 3; grid-row: 2; }
-
-    #victory-panel {
-      left: 50%;
-      top: 50%;
-      width: min(920px, 92vw);
-      padding: 0;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      backdrop-filter: none;
-      transform: translate(-50%, -50%) scale(0.94);
-      text-align: center;
-    }
-
-    #victory-panel.active {
-      transform: translate(-50%, -50%) scale(1);
-    }
-
-    .certificate-shell {
-      padding: clamp(10px, 1.8vw, 18px);
-      background: #eaf6ff;
-      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.36);
-    }
-
-    .cert-outer {
-      border: clamp(6px, 1vw, 10px) solid #22a3e8;
-      padding: clamp(8px, 1.1vw, 13px);
-    }
-
-    .cert-inner {
-      min-height: min(62vh, 560px);
-      padding: clamp(22px, 4vw, 44px);
-      border: clamp(3px, 0.55vw, 5px) solid #22a3e8;
-      background: linear-gradient(180deg, #f8fdff, #eaf6ff);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .cert-title-top {
-      color: #0b5c9d;
-      font-size: clamp(1.6rem, 4vw, 3rem);
-      font-weight: 950;
-      letter-spacing: 0;
-    }
-
-    .cert-title-main {
-      color: #16a6e7;
-      font-size: clamp(2rem, 6vw, 4rem);
-      font-weight: 950;
-      letter-spacing: 0;
-    }
-
-    .cert-line {
-      width: 62%;
-      margin: 4px auto 8px;
-      border-top: 4px solid #22a3e8;
-    }
-
-    .cert-lead,
-    .cert-body {
-      color: #334155;
-      font-weight: 650;
-      line-height: 1.5;
-    }
-
-    .cert-name {
-      color: #111827;
-      font-size: clamp(2rem, 7vw, 5rem);
-      font-weight: 950;
-      line-height: 1;
-      overflow-wrap: anywhere;
-    }
-
-    .cert-footer {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      color: #0b5c9d;
-      font-weight: 900;
-      font-size: 0.95rem;
-    }
-
-    .cert-actions {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .cert-actions .primary-btn {
-      min-width: 180px;
-    }
-
-    .secondary-btn {
-      min-height: 54px;
-      padding: 0 22px;
-      color: #073763;
-      background: #ffffff;
-      border: 2px solid rgba(14, 116, 144, 0.22);
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
-    }
-
-    .loading {
-      position: absolute;
-      left: 50%;
-      bottom: 18px;
-      transform: translateX(-50%);
-      color: #dff7ff;
-      font-weight: 800;
-      text-shadow: 0 2px 10px #000;
-      pointer-events: none;
-    }
-
-    @media (max-width: 760px) {
-      #quiz-panel {
-        left: 14px;
-        right: 14px;
-        top: auto;
-        bottom: 104px;
-        width: auto;
-        max-height: 56vh;
-        transform: scale(0.96);
-      }
-
-      #quiz-panel.active { transform: scale(1); }
-
-      .name-row {
-        grid-template-columns: 1fr;
-      }
-
-      #hud {
-        width: calc(100vw - 28px);
-        left: 14px;
-        top: 14px;
-      }
-
-      .cert-footer {
-        justify-content: center;
-      }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b2545" />
+  <meta name="description" content="Penguen kaşifinle dört bölümlük kutup seferine çık: buz çatlaklarını aş, üssü kur, yüzen buzlardan geç ve 20 bilgi bayrağını topla." />
+  <title>Kutup Bayrak Kaşifi</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b2545'/%3E%3Cellipse cx='32' cy='37' rx='15' ry='19' fill='%23101a26'/%3E%3Cellipse cx='32' cy='40' rx='10' ry='14' fill='%23fff'/%3E%3Ccircle cx='32' cy='20' r='11' fill='%23101a26'/%3E%3Ccircle cx='27.500' cy='19' r='2' fill='%23fff'/%3E%3Ccircle cx='36.500' cy='19' r='2' fill='%23fff'/%3E%3Cpath d='M28 24h8l-4 5z' fill='%23ffc233'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="vendor/three.r128.min.js"></script>
+  <script defer src="assets/models.js"></script>
+  <script defer src="questions.js"></script>
+  <script defer src="levels.js"></script>
+  <script defer src="js/util.js"></script>
+  <script defer src="js/art.js"></script>
+  <script defer src="js/world.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/game.js"></script>
 </head>
 <body>
-  <video id="ambient-video" src="assets/polar-bears.mp4" muted loop playsinline preload="auto"></video>
-  <div id="game-canvas"></div>
+  <!-- Ortak simgeler. Türk bayrağı yasal ölçülerle çizilir (en G, boy 1,5 G). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="tr-flag" viewBox="0 0 1200 800">
+      <rect width="1200" height="800" fill="#E30A17" />
+      <circle cx="425" cy="400" r="200" fill="#fff" />
+      <circle cx="475" cy="400" r="160" fill="#E30A17" />
+      <path fill="#fff" d="M583.334 400l180.901 58.779-111.804-153.885v190.212l111.804-153.885z" />
+    </symbol>
+    <symbol id="ic-crystal" viewBox="0 0 24 24"><path d="M12 1.500 19 9l-7 13.500L5 9z" fill="#7fe3ff" stroke="#0b2545" stroke-width="1.600" stroke-linejoin="round" /><path d="M5 9h14M12 1.500 9.500 9 12 22.500 14.500 9z" fill="none" stroke="#0b2545" stroke-width="1.200" stroke-linejoin="round" /></symbol>
+    <symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 2.200l2.950 6.300 6.850.850-5.050 4.700 1.300 6.800L12 17.500l-6.050 3.350 1.300-6.800L2.200 9.350l6.850-.850z" stroke-linejoin="round" /></symbol>
+    <symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M12 2.500 20 20l-8-4.200L4 20z" fill="currentColor" stroke="#0b2545" stroke-width="1.600" stroke-linejoin="round" /></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="4.500" y="10.500" width="15" height="10.500" rx="2.500" fill="currentColor" /><path d="M8 10.500V7.500a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.400" stroke-linecap="round" /></symbol>
+    <symbol id="ic-sound-on" viewBox="0 0 24 24"><path d="M4 9.500h3.500L12 5.500v13l-4.500-4H4z" fill="currentColor" /><path d="M15.500 8.500a5 5 0 0 1 0 7M18 6a8.500 8.500 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></symbol>
+    <symbol id="ic-sound-off" viewBox="0 0 24 24"><path d="M4 9.500h3.500L12 5.500v13l-4.500-4H4z" fill="currentColor" /><path d="m15.500 9.500 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></symbol>
+    <symbol id="ic-map" viewBox="0 0 24 24"><path d="M3.500 6.500 9 4.500l6 2 5.500-2v13L15 19.500l-6-2-5.500 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><path d="M9 4.500v13m6-11v13" stroke="currentColor" stroke-width="2" /></symbol>
+  </svg>
 
-  <div id="ui-layer">
-    <div id="hud">
-      <div class="hud-top">
-        <div class="timer" id="timer">06:00</div>
-        <div class="progress-label">İstasyon<br><span id="station-counter">0</span> / 20</div>
+  <div id="stage" tabindex="0" role="application" aria-label="Kutup keşif alanı. Yön tuşları veya WASD ile yürü, Boşluk ile zıpla. Hedefin yönünü duymak için K tuşuna bas."></div>
+
+  <div id="ui">
+    <!-- Oyun içi gösterge -->
+    <header id="hud" hidden>
+      <div class="hud-level">
+        <span class="chip" id="hud-level-no">Bölüm 1</span>
+        <strong id="hud-level-title">Öncülerin İzinde</strong>
       </div>
-      <div class="progress-track"><div id="progress-fill"></div></div>
-      <div class="controls-note">Ok tuşları, WASD veya ekrandaki yön düğmeleriyle ilerle.</div>
-    </div>
-
-    <main id="start-panel" class="panel active">
-      <p class="brand-kicker">Çorlu BİLSEM Kutup Araştırmaları Topluluğu</p>
-      <h1>Kutuplara Yolculuk</h1>
-      <p class="subtitle">20 istasyonluk bilim diplomasisi parkurunu tamamla, zirvede bayrağı dalgalandır ve Kutup Elçisi sertifikanı al.</p>
-
-      <div class="name-row">
-        <input id="player-name-input" type="text" autocomplete="name" placeholder="Sertifikada yazacak adınız soyadınız" />
-        <button class="primary-btn" id="start-btn" type="button">Seferi Başlat</button>
+      <div class="hud-flags" id="hud-flags" role="img" aria-label="Toplanan bayrak: 0/5"></div>
+      <div class="hud-stats">
+        <div class="stat" title="Kar kristali"><svg class="stat-ic" aria-hidden="true"><use href="#ic-crystal" /></svg><b id="hud-crystals">0</b></div>
+        <div class="stat"><span>Puan</span><b id="hud-score">0</b></div>
+        <div class="stat"><span>Süre</span><b id="hud-time">00:00</b></div>
       </div>
+      <button id="compass" class="compass" type="button" aria-label="Hedefin yönünü söyle" title="Yönü seslendir (K)">
+        <svg id="compass-arrow" aria-hidden="true"><use href="#ic-arrow" /></svg>
+        <span><small id="compass-label">Bayrak</small><b id="compass-dist">-- m</b></span>
+      </button>
+      <div class="hud-actions">
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="false" aria-label="Sesi aç" title="Sesi aç"><svg aria-hidden="true"><use id="sound-use" href="#ic-sound-off" /></svg></button>
+        <button id="btn-help" class="icon-btn" type="button" aria-label="Nasıl oynanır?" title="Nasıl oynanır?"><b aria-hidden="true">?</b></button>
+        <button id="btn-exit" class="icon-btn" type="button" aria-label="Sefer haritasına dön" title="Sefer haritası"><svg aria-hidden="true"><use href="#ic-map" /></svg></button>
+      </div>
+    </header>
+
+    <!-- Açılış -->
+    <main id="screen-title" class="screen title-screen">
+      <div class="title-copy">
+        <p class="eyebrow">Kutuplarda Türkiye'nin İzleri</p>
+        <h1 id="game-title">Kutup<br />Bayrak<br /><em>Kaşifi</em></h1>
+        <p class="lead">Dört bölümlük kutup seferine çık. Buz çatlaklarını aş, bilim üssünü kur, yüzen buzlardan geç ve 20 bilgi bayrağını topla.</p>
+      </div>
+      <form id="pass" class="card pass" autocomplete="off">
+        <div class="pass-head"><span>SEFER KARTI</span><span>4 bölüm · 20 bayrak</span></div>
+        <label for="player-name">Kaşifin adı</label>
+        <input id="player-name" type="text" maxlength="40" placeholder="Adını veya takma adını yaz" aria-describedby="name-note" />
+        <p id="name-note" class="note">Adın yalnızca sertifikan için bu cihazda saklanır; hiçbir yere gönderilmez. Farklı bir ad yazılırsa sefer baştan başlar.</p>
+        <fieldset class="picker">
+          <legend>Kaşifini seç</legend>
+          <label class="pick"><input type="radio" name="char" value="flag" checked /><span class="pick-card"><img src="assets/avatar-penguin-flag.webp" alt="" width="96" height="96" /><b>Ay</b><small>Bayrağını hiç bırakmaz</small></span></label>
+          <label class="pick"><input type="radio" name="char" value="cute" /><span class="pick-card"><img src="assets/avatar-penguin-cute.webp" alt="" width="96" height="96" /><b>Yıldız</b><small>Buzda karnının üstünde kayar</small></span></label>
+        </fieldset>
+        <button id="btn-start" class="btn primary big" type="submit" disabled><span>Sefere Çık</span><b aria-hidden="true">→</b></button>
+        <button id="btn-title-help" class="btn link" type="button">Nasıl oynanır?</button>
+      </form>
     </main>
 
-    <section id="quiz-panel" class="panel" aria-live="polite">
-      <h2 id="quiz-title">İglo 1</h2>
-      <p id="quiz-text">Yükleniyor...</p>
-      <div id="quiz-choices"></div>
-    </section>
-
-    <section id="victory-panel" class="panel">
-      <div class="certificate-shell">
-        <div class="cert-outer">
-          <div class="cert-inner">
-            <div class="cert-title-top">KUTUP ELÇİSİ</div>
-            <div class="cert-title-main">BAŞARI SERTİFİKASI</div>
-            <div class="cert-line"></div>
-            <div class="cert-lead">Bu belge,</div>
-            <div class="cert-name" id="cert-name">ARAŞTIRMACI</div>
-            <div class="cert-body">
-              20 istasyonluk kutup parkurunu ve Bilgi Testi'ni başarıyla tamamlayarak
-              <strong>"Kutup Elçisi"</strong> unvanını almaya hak kazandığı için verilmiştir.
-              Kalan süre: <strong id="cert-time">00:00</strong>
-            </div>
-            <div class="cert-footer">
-              <div>Tarih: <span id="cert-date">--.--.----</span></div>
-              <div>Çorlu BİLSEM Kutup Araştırmaları Topluluğu</div>
-            </div>
+    <!-- Sefer haritası -->
+    <section id="screen-map" class="screen map-screen" aria-labelledby="map-title" hidden>
+      <div class="card map-sheet">
+        <header class="map-head">
+          <div>
+            <p class="eyebrow dark">Güneyden kuzeye dört durak</p>
+            <h2 id="map-title">Sefer Haritası</h2>
           </div>
+          <div class="who">
+            <img id="map-avatar" src="assets/avatar-penguin-flag.webp" alt="" width="56" height="56" />
+            <div><b id="map-name">Kaşif</b><small><span id="map-stars">0</span>/12 yıldız · <span id="map-flags">0</span>/20 bayrak</small></div>
+          </div>
+        </header>
+        <ol id="map-route" class="route"></ol>
+        <footer class="map-foot">
+          <button id="btn-cert" class="btn primary" type="button" disabled>Sertifikamı göster</button>
+          <button id="btn-map-help" class="btn ghost" type="button">Nasıl oynanır?</button>
+          <button id="btn-switch" class="btn ghost" type="button">Kaşifi değiştir</button>
+          <button id="btn-unlock" class="btn link small" type="button" aria-pressed="false">Öğretmen: tüm bölümleri aç</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Bölüm tanıtımı -->
+    <section id="panel-brief" class="panel card brief" role="dialog" aria-modal="true" aria-labelledby="brief-title" hidden>
+      <div class="brief-top">
+        <span class="chip sun" id="brief-no">Bölüm 1</span>
+        <span class="chip line" id="brief-lesson">1. ders</span>
+      </div>
+      <h2 id="brief-title">Öncülerin İzinde</h2>
+      <p class="place" id="brief-place">Antarktika</p>
+      <div class="speech">
+        <img id="brief-avatar" src="assets/avatar-penguin-cute.webp" alt="" width="72" height="72" />
+        <p id="brief-text"></p>
+      </div>
+      <ul id="brief-goals" class="goals"></ul>
+      <p class="rule"><svg class="star on" aria-hidden="true"><use href="#ic-star" /></svg> En fazla 1 hatayla bitirirsen 3 yıldız kazanırsın.</p>
+      <div class="actions">
+        <button id="btn-go" class="btn primary big" type="button"><span>Başla</span><b aria-hidden="true">→</b></button>
+        <button id="btn-brief-back" class="btn ghost" type="button">Haritaya dön</button>
+      </div>
+    </section>
+
+    <!-- Soru -->
+    <section id="panel-quiz" class="panel card quiz" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="quiz-kicker" aria-describedby="quiz-text" hidden>
+      <header class="quiz-head">
+        <svg class="flag-ic" role="img" aria-label="Türk bayrağı"><use href="#tr-flag" /></svg>
+        <div>
+          <p id="quiz-kicker" class="kicker">Bilgi Bayrağı 1/5</p>
+          <p id="quiz-level" class="sub">Öncülerin İzinde</p>
         </div>
+      </header>
+      <p id="quiz-text" class="question"></p>
+      <div id="quiz-choices" class="choices"></div>
+      <div id="quiz-feedback" class="feedback" aria-live="assertive"></div>
+      <div id="quiz-note" class="sci-note" hidden>
+        <span class="note-kicker">Bilim notu</span>
+        <strong id="quiz-answer"></strong>
+        <p id="quiz-info"></p>
       </div>
-      <div class="cert-actions">
-        <button class="primary-btn" type="button" id="download-cert-btn">Sertifikayı İndir</button>
-        <button class="secondary-btn" type="button" id="restart-btn">Yeni Sefer</button>
+      <div class="actions">
+        <button id="btn-quiz-retry" class="btn primary" type="button" hidden>Anladım, yeniden dene</button>
+        <button id="btn-quiz-next" class="btn primary" type="button" hidden>Bayrağı al, devam et</button>
+      </div>
+      <p class="hint" id="quiz-hint">Klavyeden <kbd>1–4</kbd> ya da <kbd>A–D</kbd> ile de seçebilirsin.</p>
+    </section>
+
+    <!-- Bölüm sonu mini oyunu -->
+    <section id="panel-mini" class="panel card mini" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="mini-title" aria-describedby="mini-prompt" hidden>
+      <header class="mini-head">
+        <div>
+          <p class="kicker" id="mini-kicker">Son görev</p>
+          <h2 id="mini-title"></h2>
+          <p id="mini-prompt" class="sub"></p>
+        </div>
+        <div class="mini-miss" aria-live="polite">Hata <b id="mini-miss">0</b></div>
+      </header>
+      <div id="mini-body" class="mini-body"></div>
+      <div id="mini-feedback" class="feedback" aria-live="assertive"></div>
+      <div id="mini-note" class="sci-note" hidden><span class="note-kicker">Bilim notu</span><p id="mini-note-text"></p></div>
+      <div class="actions"><button id="btn-mini-done" class="btn primary" type="button" hidden>Bölümü tamamla</button></div>
+    </section>
+
+    <!-- Bölüm sonucu -->
+    <section id="panel-result" class="panel card result" role="dialog" aria-modal="true" aria-labelledby="result-title" hidden>
+      <p class="kicker" id="result-kicker">Bölüm 1 tamamlandı</p>
+      <h2 id="result-title">Harika iş, kaşif!</h2>
+      <div class="stars" id="result-stars" role="img" aria-label="3 yıldızdan 0"></div>
+      <dl class="stats">
+        <div><dt>İlk denemede doğru</dt><dd id="res-first">0/5</dd></div>
+        <div><dt>Hata</dt><dd id="res-miss">0</dd></div>
+        <div><dt>Kristal</dt><dd id="res-crystal">0</dd></div>
+        <div><dt>Süre</dt><dd id="res-time">00:00</dd></div>
+        <div class="wide"><dt>Puan</dt><dd id="res-score">0</dd></div>
+      </dl>
+      <p class="rule" id="result-rule"></p>
+      <div class="actions">
+        <button id="btn-next" class="btn primary big" type="button"><span>Sonraki bölüm</span><b aria-hidden="true">→</b></button>
+        <button id="btn-replay" class="btn ghost" type="button">Tekrar oyna</button>
+        <button id="btn-result-map" class="btn ghost" type="button">Harita</button>
       </div>
     </section>
 
-    <section id="game-over-panel" class="panel">
-      <p class="brand-kicker">Süre tamamlandı</p>
-      <h1>Seferi Yenile</h1>
-      <p class="subtitle">Bilim ekibin güvenli bölgede. Aynı sorularla yeniden başlayıp parkuru daha hızlı tamamlayabilirsin.</p>
-      <button class="primary-btn" type="button" id="try-again-btn">Baştan Dene</button>
+    <!-- Sertifika -->
+    <section id="panel-victory" class="panel card victory" role="dialog" aria-modal="true" aria-labelledby="victory-title" hidden>
+      <p class="kicker">Sefer tamamlandı</p>
+      <h2 id="victory-title">Kutup Elçisi oldun!</h2>
+      <p class="sub">Dört bölümü bitirdin ve 20 bilgi bayrağının hepsini topladın.</p>
+      <canvas id="cert-canvas" width="1600" height="1130" role="img" aria-label="Kutup Elçisi başarı sertifikası"></canvas>
+      <div class="actions">
+        <button id="btn-cert-save" class="btn primary" type="button">Sertifikayı indir</button>
+        <button id="btn-victory-map" class="btn ghost" type="button">Haritaya dön</button>
+        <button id="btn-victory-new" class="btn ghost" type="button">Yeni kaşif</button>
+      </div>
+      <p class="note" id="cert-note"></p>
     </section>
 
-    <div id="touch-controls" aria-label="Dokunmatik yön kontrolleri">
-      <button class="touch-btn" data-key="up" type="button" aria-label="İleri">▲</button>
-      <button class="touch-btn" data-key="left" type="button" aria-label="Sol">◀</button>
-      <button class="touch-btn" data-key="down" type="button" aria-label="Geri">▼</button>
-      <button class="touch-btn" data-key="right" type="button" aria-label="Sağ">▶</button>
+    <!-- Yardım -->
+    <section id="panel-help" class="panel card help" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+      <button id="btn-help-x" class="close" type="button" aria-label="Yardımı kapat">×</button>
+      <p class="kicker">Sefer rehberi</p>
+      <h2 id="help-title">Nasıl oynanır?</h2>
+      <ul class="help-grid">
+        <li><kbd>W A S D</kbd> <span>veya</span> <kbd>↑ ← ↓ →</kbd><p><b>Yürü.</b> Dokunmatik ekranda soldaki kolu kullan.</p></li>
+        <li><kbd>Boşluk</kbd><p><b>Zıpla.</b> Çatlakları ve buzlar arasındaki boşlukları böyle geçersin.</p></li>
+        <li><svg class="flag-ic" aria-hidden="true"><use href="#tr-flag" /></svg><p><b>Bilgi bayrağına yaklaş.</b> Soru açılır; doğru cevap bayrağı kazandırır.</p></li>
+        <li><svg class="stat-ic" aria-hidden="true"><use href="#ic-crystal" /></svg><p><b>Kristalleri topla.</b> Her biri puan getirir.</p></li>
+        <li><kbd>K</kbd><p><b>Yönü dinle.</b> Pusula hedefin nerede olduğunu söyler.</p></li>
+        <li><svg class="star on" aria-hidden="true"><use href="#ic-star" /></svg><p><b>Yıldız topla.</b> Ne kadar az hata, o kadar çok yıldız. Süre yıldızı etkilemez.</p></li>
+      </ul>
+      <div class="actions"><button id="btn-help-ok" class="btn primary" type="button">Anladım</button></div>
+    </section>
+
+    <!-- Çıkış onayı -->
+    <section id="panel-confirm" class="panel card confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text" hidden>
+      <h2 id="confirm-title">Haritaya dönülsün mü?</h2>
+      <p id="confirm-text">Bu bölümdeki ilerlemen silinir. Tamamladığın bölümler ve yıldızların kalır.</p>
+      <div class="actions">
+        <button id="btn-stay" class="btn primary" type="button">Bölüme devam et</button>
+        <button id="btn-leave" class="btn danger" type="button">Haritaya dön</button>
+      </div>
+    </section>
+
+    <!-- Rehber konuşma balonu -->
+    <aside id="bubble" class="bubble" aria-live="polite" hidden>
+      <img id="bubble-avatar" src="assets/avatar-penguin-cute.webp" alt="" width="64" height="64" />
+      <div><b id="bubble-name">Yıldız</b><p id="bubble-text"></p></div>
+    </aside>
+
+    <!-- Dokunmatik kontroller -->
+    <div id="touch" hidden>
+      <div id="stick" aria-hidden="true"><div id="stick-knob"></div></div>
+      <button id="btn-jump" type="button" aria-label="Zıpla">Zıpla</button>
     </div>
 
-    <div class="loading" id="loading-note">Kutup sahnesi hazırlanıyor...</div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <div id="loading" class="loading" role="status"><span class="spin" aria-hidden="true"></span><span>Kutup sahnesi hazırlanıyor…</span></div>
+    <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   </div>
 
-  <script>
-    const ASSETS = {
-      bear: "assets/polar-bear.glb"
-    };
-
-    const quizData = [
-      { q: "1. Kutuplar, Dünya'nın iklimini etkileyen çok önemli bölgelerdir. \"Kutup bölgeleri\" denildiğinde hangi iki ana coğrafya birlikte düşünülür?", opts: ["A) Grönland ve Sibirya", "B) Arktik ve Antarktika", "C) Alaska ve Norveç kıyıları", "D) Kuzey Buz Denizi ve Atlas Okyanusu"], ans: 1 },
-      { q: "2. Günümüzde ülkelerin gücü yalnızca askerî alanla değil; uzay, siber uzay ve kutuplar gibi alanlardaki bilimsel kapasiteyle de değerlendirilmektedir. Bu bilgiye göre aşağıdaki çıkarımlardan hangisi doğrudur?", opts: ["A) Antarktika'daki temel amaç askerî üs kurmaktır.", "B) Kutuplarda turizm yapmak küresel güç olmak için yeterlidir.", "C) Kutuplarda öncelikli bilim coğrafyadır.", "D) Bilimsel araştırma kapasitesi, ülkelerin dış politika ve görünürlüğü için önemlidir."], ans: 3 },
-      { q: "3. Kutuplarda çok soğuk, çok tuzlu veya çok zorlu ortamlarda yaşayabilen canlılar incelenir. Bu canlıların genel adı aşağıdakilerden hangisidir?", opts: ["A) Ekstremofiller", "B) Termofiller", "C) Halofiller", "D) Psikrofiller"], ans: 0 },
-      { q: "4. Antarktika platosu, hangi özelliği nedeniyle kızılötesi astronomik gözlemler için yeryüzündeki en elverişli sahalardan biri olarak kabul edilir?", opts: ["A) Bölgenin yıl boyunca kalın ve yüksek bir bulut örtüsüyle tamamen kaplanması", "B) Kıtada yerleşim yerlerinden kaynaklanan yoğun bir ışık kirliliğinin bulunması", "C) Çok düşük atmosferik soğurma ve düşük gökyüzü gürültüsü sunan ideal ortam", "D) Yeryüzünün en güçlü ve dalgalı manyetik alanına ev sahipliği yapıyor olması"], ans: 2 },
-      { q: "5. Antarktika'daki Amundsen-Scott Güney Kutbu İstasyonu'nda bulunan ve kozmik mikrodalga arka plan ölçümlerine odaklanan teleskop düzeneği aşağıdakilerden hangisidir?", opts: ["A) Derin uzaydaki galaksileri haritalandıran Hubble Uzay Teleskobu", "B) Kozmik mikrodalga arka planını inceleyen ünlü South Pole Telescope", "C) Kilometreküp ölçeğinde buzun içine gömülü olan IceCube Nötrino Gözlemevi", "D) Güneş sistemindeki gezegenleri izlemek için kurulan BICEP/Keck teleskopları"], ans: 1 },
-      { q: "6. Bir ülkenin kutuplarda kendi verisini üretmesi ve bu veriyi kendisinin işlemesi, dışa bağımlılığı azaltır. Bu stratejik yaklaşım aşağıdaki kavramlardan hangisiyle en iyi açıklanır?", opts: ["A) Bilim diplomasisi", "B) Araştırma tanıtımı", "C) Veri (Bilgi) egemenliği", "D) Teknolojik izolasyon"], ans: 2 },
-      { q: "7. Antarktika buz tabakaları, geçmiş atmosfer koşullarını anlamaya yardımcı olan doğal arşivlerdir. Bu tür veriler Türkiye için en çok hangi alanda işe yarar?", opts: ["A) Tarım, su yönetimi ve afet planlaması için daha güvenilir iklim modelleri geliştirmede", "B) Antarktika'da tek taraflı toprak hakkı elde etmede", "C) Kıtanın madenlerini serbestçe işletme hakkı kazanmada", "D) Antarktika Antlaşması'nı tek başına değiştirmede"], ans: 0 },
-      { q: "8. Türkiye'nin tarım, su yönetimi ve afet planlaması gibi stratejik alanlarda başka ülkelerin ürettiği iklim projeksiyonlarına bağımlı kalması ne tür bir risk oluşturur?", opts: ["A) Hayati kararların dış kaynaklı verilere dayanmasından doğan stratejik güvenlik açığı", "B) Ülkenin uluslararası ticarette rekabet gücünü doğrudan zayıflatan ağır ekonomik risk", "C) Temel bilimlerde yeterli sayıda akademik personelin yetişmesini engelleyen bilimsel geri kalmışlık", "D) Teknolojik altyapının çağın gerisinde kalmasından kaynaklı teknolojik yetersizlik"], ans: 0 },
-      { q: "9. Türkiye'nin Horseshoe Adası'ndaki bilim kampında özgün veri üretmesi, aşağıdaki kazanımlardan hangisini doğrudan destekler?", opts: ["A) Yabancı ülkelerin tüm ticari meteoroloji verilerine ücretsiz sınırsız erişim sağlanmasını", "B) Yerli ve özgün verilerle bilimsel literatüre katkı sunulmasını", "C) Antarktika'daki tüm istasyonların denetlenmesini", "D) Antarktika'da maden çıkarma izni alınmasını"], ans: 1 },
-      { q: "10. Türkiye'nin kutup çalışmalarındaki hedefi bilimsel kapasite oluşturmaktır. Bu hedef aşağıdakilerden hangisiyle en doğru ifade edilir?", opts: ["A) Antarktika kıtasının güvenliğini tek başına sağlamak", "B) Küresel karar alma mekanizmalarına bilimsel ve teknolojik kapasiteyle katılmak", "C) Medyada daha çok görünmek", "D) Bilim yapmadan danışman ülke statüsü almak"], ans: 1 },
-      { q: "11. 1967-1968 yıllarında ABD'nin Plateau İstasyonu'nda araştırmalar yürüten ve kıtadaki bir kayalığa (Rocks) adı verilerek uluslararası literatüre geçen öncü Türk bilim insanı kimdir?", opts: ["A) Plateau İstasyonu'nda çalışmalar yapan Prof. Dr. Atok Karaali", "B) Çalışmalarıyla bir zirveye (Peak) ismi verilen Ümran S. İnan", "C) Yaptığı sivil deniz seferleriyle konuyu taşıyan Osman Atasoy", "D) Yürütülen araştırmalarla buzul sirkine soyadı verilen Serap Z. Tilav"], ans: 0 },
-      { q: "12. Türkiye'nin Antarktika'da bilimsel varlığı için önemli bir diplomatik adım olan ve 24 Ocak 1996'da yürürlüğe giren gelişme aşağıdakilerden hangisidir?", opts: ["A) Arktik Konseyi'ni kurması", "B) BM İklim Değişikliği Çerçeve Sözleşmesi'ni yazması", "C) İlk milli buzkıran gemisini denize indirmesi", "D) Antarktika Antlaşması'na taraf olarak hukuki zemine kavuşması"], ans: 3 },
-      { q: "13. 2015 yılında kurulan ve Türkiye'nin kutup stratejisinin belirlenmesinde 'ilk çatı kuruluş' görevini üstlenen akademik merkez aşağıdakilerden hangisidir?", opts: ["A) Doğrudan Çevre, Şehircilik ve İklim Değişikliği Bakanlığı Kutup Masası", "B) TÜBİTAK Marmara Araştırma Merkezi Kutup Araştırmaları Enstitüsü", "C) İstanbul Teknik Üniversitesi Kutup Araştırmaları Merkezi (PolReC)", "D) Türkiye Uzay Ajansı İleri Araştırmalar Birimi"], ans: 2 },
-      { q: "14. İTÜ Kutup Araştırmaları Merkezi (PolReC) Müdürlüğü görevini yürüten ve birçok Ulusal Antarktika Bilim Seferi'nin koordinatörlüğünü üstlenen bilim insanı aşağıdakilerden hangisidir?", opts: ["A) Prof. Dr. Burcu Özsoy", "B) Prof. Dr. Ümran S. İnan", "C) Prof. Dr. Atok Karaali", "D) Osman Atasoy"], ans: 0 },
-      { q: "15. Ulusal Antarktika Bilim Seferleri'nin (TAE) 2017'den itibaren düzenli hâle gelmesi, Türkiye'nin kutup çalışmalarında hangi değişimi gösterir?", opts: ["A) Tüm çalışmaların Arktik'e kaydırıldığını", "B) Uluslararası ortaklıklardan vazgeçildiğini", "C) Tek seferlik ilgi yerine sürekliliği olan bir programa geçildiğini", "D) Bilimsel amaçların bırakılıp ekonomik kazancın öne çıktığını"], ans: 2 },
-      { q: "16. Türkiye'nin kutup araştırmalarını kalıcı devlet politikası hâline getirmek amacıyla 2019 yılında TÜBİTAK bünyesinde kurulan enstitü aşağıdakilerden hangisidir?", opts: ["A) İTÜ PolReC", "B) TÜBİTAK MAM Kutup Araştırmaları Enstitüsü (KARE)", "C) Kandilli Rasathanesi", "D) Ankara Üniversitesi Kutup Bilimleri Merkezi"], ans: 1 },
-      { q: "17. Türkiye'nin Batı Antarktika Yarımadası çevresinde geçici bilim kampı kurduğu ana saha aşağıdakilerden hangisidir?", opts: ["A) Horseshoe Adası", "B) Vostok İstasyonu", "C) McMurdo İstasyonu", "D) Dome A Bölgesi"], ans: 0 },
-      { q: "18. Aşağıdakilerden hangisi Türkiye'nin 2020-2025 yılları arasında kurumsal düzeyde bağlandığı uluslararası bilim/lojistik ağlarından biri DEĞİLDİR?", opts: ["A) Antarktika Araştırmaları Bilimsel Komitesi (SCAR)", "B) Ulusal Antarktika Programları Yöneticileri Konseyi (COMNAP)", "C) Uluslararası Arktik Bilim Komitesi (IASC)", "D) Kuzey Atlantik Antlaşması Örgütü (NATO)"], ans: 3 },
-      { q: "19. Türkiye'nin kutup araştırmaları kapsamında gerçekleştirdiği ulusal bilim seferlerinde, Antarktika ve Arktik bölgelerine düzenlenen toplam sefer sayısı aşağıdakilerden hangisidir?", opts: ["A) Antarktika 10, Arktik 5", "B) Antarktika 11, Arktik 3", "C) Antarktika 9, Arktik 5", "D) Antarktika 8, Arktik 6"], ans: 0 },
-      { q: "20. 'Gezegenin Kara Kutusu: Antarktika' belgeselinin TRT Belgesel'de yayımlanması ile hedeflenen temel işlev aşağıdakilerden hangisidir?", opts: ["A) Antarktika gezilerinin tanıtımını yapmak", "B) Kıtadaki bilimsel çalışmaları ve iklim değişikliğini kamuoyuna aktarmak", "C) Antarktika'daki uluslararası birlikleri tanıtmak", "D) Türkiye'nin kıta üzerindeki ekonomik faaliyetlerini açıklamak"], ans: 1 }
-    ];
-
-    const TOTAL_STATIONS = quizData.length;
-    const Z_SPACING = 34;
-    const MOVE_SPEED = 0.34;
-    const START_TIME = 360;
-    const WRONG_PENALTY = 5;
-
-    let scene, camera, renderer, playerModel, bearModel;
-    let snowParticles, finalFlagGroup, flagMesh, flagBasePositions;
-    let timerInterval, timeRemaining = START_TIME;
-    let currentQuestion = 0;
-    let isGameRunning = false;
-    let isAnswering = false;
-    let isFinale = false;
-    let isGameOver = false;
-    let finaleProgress = 0;
-    let finaleElapsed = 0;
-    let victoryShown = false;
-    let playerName = "Araştırmacı";
-    let platforms = [];
-    let barriers = [];
-    let movementTime = 0;
-
-    const keys = { up: false, down: false, left: false, right: false };
-    const clock = new THREE.Clock();
-    const gltfLoader = new THREE.GLTFLoader();
-
-    function el(id) {
-      return document.getElementById(id);
-    }
-
-    function init() {
-      scene = new THREE.Scene();
-      scene.fog = new THREE.FogExp2(0x06111f, 0.0046);
-
-      camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 1600);
-      camera.position.set(0, 8, 28);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.outputEncoding = THREE.sRGBEncoding;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      el("game-canvas").appendChild(renderer.domElement);
-
-      createLights();
-      createSnow();
-      createWorld();
-      createPlayerFallback();
-      loadBear();
-      setupInput();
-      bindUI();
-      animate();
-
-      window.addEventListener("resize", onResize);
-      el("loading-note").textContent = "Hazır";
-      setTimeout(() => el("loading-note").style.display = "none", 1000);
-    }
-
-    function createLights() {
-      scene.add(new THREE.HemisphereLight(0xdff7ff, 0x17324a, 1.2));
-
-      const sun = new THREE.DirectionalLight(0xffffff, 1.35);
-      sun.position.set(-18, 34, 22);
-      sun.castShadow = true;
-      sun.shadow.camera.left = -70;
-      sun.shadow.camera.right = 70;
-      sun.shadow.camera.top = 70;
-      sun.shadow.camera.bottom = -70;
-      scene.add(sun);
-    }
-
-    function createSnow() {
-      const count = 1800;
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(count * 3);
-      for (let i = 0; i < positions.length; i += 3) {
-        positions[i] = (Math.random() - 0.5) * 120;
-        positions[i + 1] = Math.random() * 80;
-        positions[i + 2] = -Math.random() * 760 + 30;
-      }
-      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-      const material = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.42,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false
-      });
-
-      snowParticles = new THREE.Points(geometry, material);
-      scene.add(snowParticles);
-    }
-
-    function createWorld() {
-      const iceMat = new THREE.MeshStandardMaterial({
-        color: 0xd9f5ff,
-        roughness: 0.86,
-        metalness: 0.04,
-        transparent: true,
-        opacity: 0.88
-      });
-      const ridgeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.96 });
-      const blueMat = new THREE.MeshStandardMaterial({ color: 0x79dcff, roughness: 0.72, transparent: true, opacity: 0.5 });
-
-      const path = new THREE.Mesh(new THREE.PlaneGeometry(12, TOTAL_STATIONS * Z_SPACING + 72), iceMat);
-      path.rotation.x = -Math.PI / 2;
-      path.position.z = -(TOTAL_STATIONS - 1) * Z_SPACING / 2;
-      path.receiveShadow = true;
-      scene.add(path);
-
-      for (let i = 0; i < TOTAL_STATIONS; i++) {
-        const z = -i * Z_SPACING;
-        platforms.push(new THREE.Vector3(0, 0, z));
-
-        const platform = new THREE.Group();
-        platform.position.set(0, 0.02, z);
-
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 8.2, 0.55, 42), iceMat);
-        base.castShadow = true;
-        base.receiveShadow = true;
-        platform.add(base);
-
-        const igloo = createIgloo(i + 1);
-        igloo.position.set(i % 2 === 0 ? -4.8 : 4.8, 0.24, 0.4);
-        igloo.rotation.y = i % 2 === 0 ? 0.45 : -0.45;
-        platform.add(igloo);
-
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(6.45, 0.08, 10, 80), blueMat);
-        ring.rotation.x = Math.PI / 2;
-        ring.position.y = 0.35;
-        platform.add(ring);
-
-        scene.add(platform);
-
-        if (i < TOTAL_STATIONS - 1) {
-          const barrierZ = z - Z_SPACING / 2;
-          const barrier = new THREE.Mesh(new THREE.BoxGeometry(11.6, 6, 0.44), new THREE.MeshBasicMaterial({
-            color: 0x38bdf8,
-            transparent: true,
-            opacity: 0.22
-          }));
-          barrier.position.set(0, 3.1, barrierZ);
-          scene.add(barrier);
-          barriers.push({ mesh: barrier, zPos: barrierZ });
-        }
-      }
-
-      for (let i = 0; i < 34; i++) {
-        const side = i % 2 === 0 ? -1 : 1;
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(6 + Math.random() * 8, 18 + Math.random() * 20, 5), ridgeMat);
-        cone.position.set(side * (20 + Math.random() * 30), 5, 20 - Math.random() * (TOTAL_STATIONS * Z_SPACING + 80));
-        cone.rotation.y = Math.random() * Math.PI;
-        cone.castShadow = true;
-        scene.add(cone);
-      }
-
-      const mountainZ = -(TOTAL_STATIONS - 1) * Z_SPACING - 38;
-      const mountain = new THREE.Mesh(new THREE.ConeGeometry(28, 42, 6), ridgeMat);
-      mountain.position.set(0, 20, mountainZ);
-      mountain.castShadow = true;
-      scene.add(mountain);
-      createFinalFlag(mountainZ);
-    }
-
-    function createIgloo(number) {
-      const group = new THREE.Group();
-      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92 });
-      const doorMat = new THREE.MeshStandardMaterial({ color: 0x17324a, roughness: 0.8 });
-
-      const dome = new THREE.Mesh(new THREE.SphereGeometry(3.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), whiteMat);
-      dome.scale.z = 0.92;
-      dome.castShadow = true;
-      group.add(dome);
-
-      const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.65, 1.35), doorMat);
-      door.position.set(0, 0.72, 2.56);
-      door.castShadow = true;
-      group.add(door);
-
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeNumberTexture(number), transparent: true }));
-      sprite.position.set(0, 4.4, 0);
-      sprite.scale.set(3.2, 1.6, 1);
-      group.add(sprite);
-
-      return group;
-    }
-
-    function makeNumberTexture(number) {
-      const canvas = document.createElement("canvas");
-      canvas.width = 256;
-      canvas.height = 128;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "rgba(3, 105, 161, 0.92)";
-      roundRect(ctx, 18, 18, 220, 92, 24);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      ctx.lineWidth = 6;
-      ctx.stroke();
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 58px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(String(number), 128, 66);
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function roundRect(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
-
-    function createFinalFlag(mountainZ) {
-      finalFlagGroup = new THREE.Group();
-      finalFlagGroup.position.set(0, 43, mountainZ);
-      finalFlagGroup.visible = false;
-
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 12, 18), new THREE.MeshStandardMaterial({ color: 0xd9e2ec, roughness: 0.45 }));
-      pole.position.y = 0;
-      finalFlagGroup.add(pole);
-
-      flagMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(9.2, 6.1, 22, 14),
-        new THREE.MeshBasicMaterial({ map: createFlagTexture(), side: THREE.DoubleSide })
-      );
-      flagMesh.position.set(4.65, 2.3, 0);
-      finalFlagGroup.add(flagMesh);
-      flagBasePositions = flagMesh.geometry.attributes.position.array.slice();
-
-      scene.add(finalFlagGroup);
-    }
-
-    function createFlagTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 600;
-      canvas.height = 400;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#e30a17";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(225, 200, 90, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#e30a17";
-      ctx.beginPath();
-      ctx.arc(252, 200, 72, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = "#fff";
-      ctx.save();
-      ctx.translate(350, 200);
-      ctx.rotate(-Math.PI / 10);
-      ctx.beginPath();
-      for (let i = 0; i < 5; i++) {
-        ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * 42, -Math.sin((18 + i * 72) * Math.PI / 180) * 42);
-        ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * 18, -Math.sin((54 + i * 72) * Math.PI / 180) * 18);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    function createPlayerFallback() {
-      playerModel = new THREE.Group();
-      playerModel.position.set(0, 0, 12);
-
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.75 });
-      const bellyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85 });
-      const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.72 });
-      const eyeMat = new THREE.MeshStandardMaterial({ color: 0x050816, roughness: 0.5 });
-      const scarfMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.6 });
-      const mascot = new THREE.Group();
-
-      const body = new THREE.Mesh(new THREE.SphereGeometry(1.5, 24, 24), bodyMat);
-      body.scale.set(0.88, 1.22, 0.72);
-      body.position.y = 2.1;
-      body.castShadow = true;
-      mascot.add(body);
-
-      const belly = new THREE.Mesh(new THREE.SphereGeometry(1.08, 24, 24), bellyMat);
-      belly.scale.set(0.75, 1, 0.28);
-      belly.position.set(0, 1.86, 0.78);
-      mascot.add(belly);
-
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.95, 24, 24), bodyMat);
-      head.position.y = 3.72;
-      head.castShadow = true;
-      mascot.add(head);
-
-      const face = new THREE.Mesh(new THREE.SphereGeometry(0.62, 24, 24), bellyMat);
-      face.scale.set(0.82, 0.72, 0.22);
-      face.position.set(0, 3.72, 0.73);
-      mascot.add(face);
-
-      const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), eyeMat);
-      leftEye.position.set(-0.23, 3.84, 0.88);
-      mascot.add(leftEye);
-
-      const rightEye = leftEye.clone();
-      rightEye.position.x = 0.23;
-      mascot.add(rightEye);
-
-      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.58, 16), orangeMat);
-      beak.rotation.x = Math.PI / 2;
-      beak.position.set(0, 3.65, 0.95);
-      mascot.add(beak);
-
-      const leftWing = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 16), bodyMat);
-      leftWing.scale.set(0.45, 1.55, 0.22);
-      leftWing.position.set(-1.15, 2.15, 0.05);
-      leftWing.rotation.z = -0.28;
-      mascot.add(leftWing);
-
-      const rightWing = leftWing.clone();
-      rightWing.position.x = 1.15;
-      rightWing.rotation.z = 0.28;
-      mascot.add(rightWing);
-
-      const leftFoot = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), orangeMat);
-      leftFoot.scale.set(1.15, 0.32, 0.72);
-      leftFoot.position.set(-0.44, 0.18, 0.46);
-      mascot.add(leftFoot);
-
-      const rightFoot = leftFoot.clone();
-      rightFoot.position.x = 0.44;
-      mascot.add(rightFoot);
-
-      const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.74, 0.09, 12, 28), scarfMat);
-      scarf.position.set(0, 3.02, 0.03);
-      scarf.rotation.x = Math.PI / 2;
-      mascot.add(scarf);
-
-      const scarfTail = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.86, 0.12), scarfMat);
-      scarfTail.position.set(0.62, 2.56, 0.52);
-      scarfTail.rotation.z = -0.28;
-      mascot.add(scarfTail);
-
-      playerModel.userData.parts = { mascot, leftWing, rightWing, leftFoot, rightFoot, scarfTail };
-      playerModel.add(mascot);
-      scene.add(playerModel);
-    }
-
-    function loadBear() {
-      gltfLoader.load(ASSETS.bear, (gltf) => {
-        bearModel = gltf.scene;
-        fitModel(bearModel, 6.4);
-        bearModel.position.set(-22, 0.25, -160);
-        bearModel.rotation.y = Math.PI * 0.38;
-        scene.add(bearModel);
-      });
-    }
-
-    function fitModel(model, targetHeight) {
-      const box = new THREE.Box3().setFromObject(model);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const scale = targetHeight / Math.max(size.y, 0.001);
-      model.scale.setScalar(scale);
-
-      const fittedBox = new THREE.Box3().setFromObject(model);
-      const center = new THREE.Vector3();
-      fittedBox.getCenter(center);
-      model.position.x -= center.x;
-      model.position.z -= center.z;
-      model.position.y -= fittedBox.min.y;
-
-      model.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-    }
-
-    function bindUI() {
-      el("start-btn").addEventListener("click", startGame);
-      el("player-name-input").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") startGame();
-      });
-      el("try-again-btn").addEventListener("click", () => window.location.reload());
-      el("restart-btn").addEventListener("click", () => window.location.reload());
-      el("download-cert-btn").addEventListener("click", downloadCertificate);
-    }
-
-    function startGame() {
-      const name = el("player-name-input").value.trim();
-      if (!name) {
-        el("player-name-input").focus();
-        el("player-name-input").placeholder = "Başlamak için adınızı soyadınızı yazın";
-        return;
-      }
-
-      playerName = name;
-      timeRemaining = START_TIME;
-      updateTimerDisplay();
-      el("start-panel").classList.remove("active");
-      el("hud").classList.add("active");
-      el("touch-controls").classList.add("active");
-
-      const video = el("ambient-video");
-      video.play().catch(() => {});
-
-      isGameRunning = true;
-      timerInterval = window.setInterval(updateTimer, 1000);
-    }
-
-    function setupInput() {
-      window.addEventListener("keydown", (event) => {
-        const code = event.key.toLowerCase();
-        if (code === "arrowup" || code === "w") { keys.up = true; nudgePlayer("up"); }
-        if (code === "arrowdown" || code === "s") { keys.down = true; nudgePlayer("down"); }
-        if (code === "arrowleft" || code === "a") { keys.left = true; nudgePlayer("left"); }
-        if (code === "arrowright" || code === "d") { keys.right = true; nudgePlayer("right"); }
-      });
-
-      window.addEventListener("keyup", (event) => {
-        const code = event.key.toLowerCase();
-        if (code === "arrowup" || code === "w") keys.up = false;
-        if (code === "arrowdown" || code === "s") keys.down = false;
-        if (code === "arrowleft" || code === "a") keys.left = false;
-        if (code === "arrowright" || code === "d") keys.right = false;
-      });
-
-      document.querySelectorAll(".touch-btn").forEach((button) => {
-        const key = button.dataset.key;
-        const set = (value) => {
-          keys[key] = value;
-        };
-        button.addEventListener("pointerdown", (event) => {
-          event.preventDefault();
-          button.setPointerCapture(event.pointerId);
-          set(true);
-        });
-        button.addEventListener("pointerup", () => set(false));
-        button.addEventListener("pointercancel", () => set(false));
-        button.addEventListener("pointerleave", () => set(false));
-        button.addEventListener("click", () => nudgePlayer(key));
-      });
-    }
-
-    function updateTimer() {
-      if (!isGameRunning || isAnswering || isFinale || isGameOver) return;
-      timeRemaining = Math.max(0, timeRemaining - 1);
-      updateTimerDisplay();
-      if (timeRemaining <= 0) triggerGameOver();
-    }
-
-    function updateTimerDisplay() {
-      const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, "0");
-      const seconds = String(timeRemaining % 60).padStart(2, "0");
-      el("timer").textContent = `${minutes}:${seconds}`;
-      el("timer").classList.toggle("warning", timeRemaining <= 45);
-    }
-
-    function triggerGameOver() {
-      isGameOver = true;
-      isGameRunning = false;
-      window.clearInterval(timerInterval);
-      el("hud").classList.remove("active");
-      el("touch-controls").classList.remove("active");
-      el("quiz-panel").classList.remove("active");
-      el("game-over-panel").classList.add("active");
-    }
-
-    function triggerQuestionUI() {
-      isAnswering = true;
-      stopWalk();
-      const qData = quizData[currentQuestion];
-      el("quiz-title").textContent = `İglo ${currentQuestion + 1}`;
-      el("quiz-text").textContent = qData.q;
-
-      const choices = el("quiz-choices");
-      choices.innerHTML = "";
-      qData.opts.forEach((option, index) => {
-        const button = document.createElement("button");
-        button.className = "choice-btn";
-        button.type = "button";
-        button.textContent = option;
-        button.addEventListener("click", () => handleAnswer(button, index === qData.ans));
-        choices.appendChild(button);
-      });
-      el("quiz-panel").classList.add("active");
-    }
-
-    function handleAnswer(button, isCorrect) {
-      if (!isCorrect) {
-        button.classList.add("wrong");
-        timeRemaining = Math.max(0, timeRemaining - WRONG_PENALTY);
-        updateTimerDisplay();
-        setTimeout(() => button.classList.remove("wrong"), 650);
-        if (timeRemaining <= 0) triggerGameOver();
-        return;
-      }
-
-      document.querySelectorAll(".choice-btn").forEach((btn) => btn.disabled = true);
-      button.classList.add("correct");
-
-      setTimeout(() => {
-        el("quiz-panel").classList.remove("active");
-        const completed = currentQuestion + 1;
-        el("station-counter").textContent = String(completed);
-        el("progress-fill").style.width = `${(completed / TOTAL_STATIONS) * 100}%`;
-
-        if (currentQuestion < TOTAL_STATIONS - 1) {
-          scene.remove(barriers[currentQuestion].mesh);
-          currentQuestion += 1;
-          isAnswering = false;
-          playerModel.position.z -= 1.1;
-        } else {
-          isAnswering = false;
-          isFinale = true;
-          stopWalk();
-        }
-      }, 650);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      movementTime += delta;
-
-      updateSnow();
-      animateBear(delta);
-
-      if (isFinale) {
-        updateFinale(delta);
-      } else if (isGameRunning && !isAnswering && !isGameOver) {
-        updateMovement(delta);
-      }
-      animateMascot(delta);
-
-      const targetY = isFinale ? 29 : 9.2;
-      const targetZ = playerModel.position.z + (isFinale ? 42 : 31);
-      camera.position.x += (playerModel.position.x - camera.position.x) * 0.06;
-      camera.position.y += (targetY - camera.position.y) * 0.04;
-      camera.position.z += (targetZ - camera.position.z) * 0.07;
-      camera.lookAt(playerModel.position.x, playerModel.position.y + 1.6, playerModel.position.z - 8);
-      renderer.render(scene, camera);
-    }
-
-    function updateMovement(delta) {
-      let dx = 0;
-      let dz = 0;
-      if (keys.up) dz -= MOVE_SPEED;
-      if (keys.down) dz += MOVE_SPEED * 0.72;
-      if (keys.left) dx -= MOVE_SPEED;
-      if (keys.right) dx += MOVE_SPEED;
-
-      const moving = dx !== 0 || dz !== 0;
-      playerModel.userData.isMoving = moving;
-
-      if (moving) {
-        playerModel.position.x = Math.max(-4.7, Math.min(4.7, playerModel.position.x + dx));
-        playerModel.position.z += dz;
-        playerModel.rotation.y = Math.atan2(dx, dz);
-        playWalk();
-      } else {
-        stopWalk();
-        playerModel.rotation.z = Math.sin(movementTime * 2) * 0.018;
-      }
-
-      if (currentQuestion < TOTAL_STATIONS - 1) {
-        const limit = barriers[currentQuestion].zPos + 2;
-        if (playerModel.position.z < limit) playerModel.position.z = limit;
-      }
-
-      if (Math.abs(playerModel.position.z - platforms[currentQuestion].z) < 4.8) {
-        triggerQuestionUI();
-      }
-    }
-
-    function nudgePlayer(direction) {
-      if (!isGameRunning || isAnswering || isFinale || isGameOver) return;
-
-      const step = MOVE_SPEED * 3.2;
-      let dx = 0;
-      let dz = 0;
-      if (direction === "up") dz = -step;
-      if (direction === "down") dz = step * 0.72;
-      if (direction === "left") dx = -step;
-      if (direction === "right") dx = step;
-
-      if (dx === 0 && dz === 0) return;
-      playerModel.position.x = Math.max(-4.7, Math.min(4.7, playerModel.position.x + dx));
-      playerModel.position.z += dz;
-      playerModel.rotation.y = Math.atan2(dx, dz);
-      playerModel.userData.isMoving = true;
-
-      if (currentQuestion < TOTAL_STATIONS - 1) {
-        const limit = barriers[currentQuestion].zPos + 2;
-        if (playerModel.position.z < limit) playerModel.position.z = limit;
-      }
-
-      if (Math.abs(playerModel.position.z - platforms[currentQuestion].z) < 4.8) {
-        triggerQuestionUI();
-      }
-    }
-
-    function animateMascot(delta) {
-      const parts = playerModel && playerModel.userData.parts;
-      if (!parts) return;
-
-      const moving = playerModel.userData.isMoving || isFinale;
-      const speed = moving ? 9.5 : 2.2;
-      const amp = moving ? 1 : 0.22;
-      const stride = Math.sin(movementTime * speed);
-
-      parts.mascot.position.y = 0.08 + Math.abs(stride) * 0.12 * amp;
-      parts.mascot.rotation.z = Math.sin(movementTime * (moving ? 5 : 1.6)) * (moving ? 0.045 : 0.018);
-      parts.leftWing.rotation.z = -0.34 - stride * 0.28 * amp;
-      parts.rightWing.rotation.z = 0.34 + stride * 0.28 * amp;
-      parts.leftFoot.rotation.x = stride * 0.35 * amp;
-      parts.rightFoot.rotation.x = -stride * 0.35 * amp;
-      parts.scarfTail.rotation.z = -0.28 + Math.sin(movementTime * 4.4) * 0.12;
-    }
-
-    function playWalk() {
-      playerModel.userData.isMoving = true;
-    }
-
-    function stopWalk() {
-      playerModel.userData.isMoving = false;
-    }
-
-    function updateSnow() {
-      if (!snowParticles) return;
-      const positions = snowParticles.geometry.attributes.position.array;
-      for (let i = 1; i < positions.length; i += 3) {
-        positions[i] -= 0.18;
-        positions[i - 1] += Math.sin(movementTime + i) * 0.002;
-        if (positions[i] < -5) {
-          positions[i] = 78;
-          positions[i + 1] = playerModel.position.z - 280 + Math.random() * 360;
-        }
-      }
-      snowParticles.geometry.attributes.position.needsUpdate = true;
-    }
-
-    function animateBear(delta) {
-      if (!bearModel) return;
-      bearModel.rotation.y += Math.sin(movementTime * 0.6) * delta * 0.08;
-      bearModel.position.x = -22 + Math.sin(movementTime * 0.45) * 2.6;
-    }
-
-    function updateFinale(delta) {
-      const startZ = platforms[TOTAL_STATIONS - 1].z;
-      const mountainZ = -(TOTAL_STATIONS - 1) * Z_SPACING - 38;
-      finaleProgress += delta * 0.18;
-      playWalk();
-
-      if (finaleProgress <= 1) {
-        playerModel.position.z = startZ + (mountainZ - startZ) * easeInOut(finaleProgress);
-        playerModel.position.x += (0 - playerModel.position.x) * 0.04;
-        playerModel.position.y = 0;
-        playerModel.rotation.y = Math.PI;
-        return;
-      }
-
-      stopWalk();
-      playerModel.position.set(0, 42.6, mountainZ + 2);
-      playerModel.rotation.y = Math.PI * 0.92;
-      finalFlagGroup.visible = true;
-      finaleElapsed += delta;
-
-      if (finaleElapsed < 1.2) {
-        finalFlagGroup.rotation.z = Math.sin(finaleElapsed * Math.PI * 8) * 0.10;
-      } else {
-        finalFlagGroup.rotation.z = 0;
-      }
-
-      waveFlag(delta);
-
-      if (!victoryShown && finaleElapsed >= 5.5) {
-        victoryShown = true;
-        showVictory();
-      }
-    }
-
-    function waveFlag(delta) {
-      if (!flagMesh || !flagBasePositions) return;
-      const pos = flagMesh.geometry.attributes.position;
-      const arr = pos.array;
-      for (let i = 0; i < arr.length; i += 3) {
-        const ox = flagBasePositions[i];
-        const oy = flagBasePositions[i + 1];
-        const oz = flagBasePositions[i + 2];
-        const amount = (ox + 4.6) / 9.2;
-        arr[i] = ox;
-        arr[i + 1] = oy;
-        arr[i + 2] = oz + Math.sin(movementTime * 7 + ox * 1.5 + oy * 0.7) * 0.38 * amount;
-      }
-      pos.needsUpdate = true;
-    }
-
-    function easeInOut(t) {
-      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    }
-
-    function showVictory() {
-      isGameRunning = false;
-      window.clearInterval(timerInterval);
-      el("hud").classList.remove("active");
-      el("touch-controls").classList.remove("active");
-      el("cert-name").textContent = playerName.toLocaleUpperCase("tr-TR");
-      el("cert-time").textContent = el("timer").textContent;
-      el("cert-date").textContent = formatDateTR(new Date());
-      el("victory-panel").classList.add("active");
-    }
-
-    function formatDateTR(date) {
-      const dd = String(date.getDate()).padStart(2, "0");
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      return `${dd}.${mm}.${date.getFullYear()}`;
-    }
-
-    function downloadCertificate() {
-      const W = 1600;
-      const H = 1066;
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#eaf6ff";
-      ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = "#f8fdff";
-      ctx.fillRect(82, 82, W - 164, H - 164);
-
-      ctx.strokeStyle = "#22a3e8";
-      ctx.lineWidth = 18;
-      ctx.strokeRect(30, 30, W - 60, H - 60);
-      ctx.lineWidth = 6;
-      ctx.strokeRect(70, 70, W - 140, H - 140);
-
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#0b5c9d";
-      ctx.font = "900 76px Arial";
-      ctx.fillText("KUTUP ELÇİSİ", W / 2, 210);
-
-      ctx.fillStyle = "#19a5e6";
-      ctx.font = "900 110px Arial";
-      ctx.fillText("BAŞARI SERTİFİKASI", W / 2, 330);
-
-      ctx.strokeStyle = "#22a3e8";
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(W * 0.25, 386);
-      ctx.lineTo(W * 0.75, 386);
-      ctx.stroke();
-
-      ctx.fillStyle = "#374151";
-      ctx.font = "500 44px Arial";
-      ctx.fillText("Bu belge,", W / 2, 470);
-
-      const name = playerName.toLocaleUpperCase("tr-TR");
-      ctx.fillStyle = "#111827";
-      ctx.font = "900 100px Arial";
-      fitCanvasText(ctx, name, W / 2, 590, W * 0.78, 100);
-
-      ctx.fillStyle = "#334155";
-      ctx.font = "500 40px Arial";
-      const body = `20 istasyonluk kutup parkurunu ve Bilgi Testi'ni başarıyla tamamlayarak "Kutup Elçisi" unvanını almaya hak kazanmıştır. Kalan süre: ${el("timer").textContent}`;
-      wrapCanvasText(ctx, body, W / 2, 690, W * 0.78, 56);
-
-      ctx.fillStyle = "#0b5c9d";
-      ctx.font = "900 38px Arial";
-      ctx.textAlign = "left";
-      ctx.fillText(`Tarih: ${formatDateTR(new Date())}`, 120, H - 120);
-      ctx.textAlign = "right";
-      ctx.fillText("Çorlu BİLSEM Kutup Araştırmaları Topluluğu", W - 120, H - 120);
-
-      const link = document.createElement("a");
-      link.download = `${name.replace(/\s+/g, "_")}_Kutup_Elcisi_Sertifika.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    }
-
-    function fitCanvasText(ctx, text, x, y, maxWidth, initialSize) {
-      let size = initialSize;
-      do {
-        ctx.font = `900 ${size}px Arial`;
-        size -= 4;
-      } while (ctx.measureText(text).width > maxWidth && size > 42);
-      ctx.fillText(text, x, y);
-    }
-
-    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
-      const words = text.split(" ");
-      let line = "";
-      let yy = y;
-      ctx.textAlign = "center";
-      words.forEach((word) => {
-        const test = `${line}${word} `;
-        if (ctx.measureText(test).width > maxWidth && line) {
-          ctx.fillText(line.trim(), x, yy);
-          line = `${word} `;
-          yy += lineHeight;
-        } else {
-          line = test;
-        }
-      });
-      if (line) ctx.fillText(line.trim(), x, yy);
-    }
-
-    function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    window.addEventListener("load", init);
-  </script>
+  <noscript><p class="noscript">Bu oyunu çalıştırmak için tarayıcında JavaScript'i etkinleştir.</p></noscript>
 </body>
 </html>
