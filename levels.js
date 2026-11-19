@@ -32,7 +32,7 @@
       theme: "dawn",
       rim: "cliff",
       mechanic: "Buz gölü ve çatlaklar",
-      brief: "Türkiye'nin kutup yolculuğu cesur öncülerle başladı. 1960'larda Antarktika'da çalışan bilim insanlarının ve kıtaya yelken açan denizcilerin izini sür.",
+      brief: "Kutuplara ilgi eskidir: Piri Reis'in 1513 haritası Antarktika'ya en yakın toprakları gösterir, Celal Nuri İleri 1912'de kuzeye, Arktik'e gitti. Bilim insanları 1960'larda yola çıktı. Antarktika'da çalışan öncülerin ve kıtaya yelken açan denizcilerin izini sür.",
       goals: [
         "5 bilgi bayrağını bul, soruları yanıtla",
         "Buz çatlaklarının üzerinden zıpla",
@@ -58,6 +58,8 @@
       ],
       props: [
         { type: "hut", x: 22, z: 7, rot: -0.5 },
+        { type: "sign", x: 7.5, z: 46, text: "Piri Reis Haritası", sub: "1513 · Ateş Toprakları" },
+        { type: "sign", x: -13, z: 33.5, text: "Celal Nuri İleri", sub: "1912 · Kuzeye yolculuk" },
         { type: "sign", x: 18.5, z: 12.5, text: "Plato İstasyonu", sub: "Atok Karaali · 1960'lar" },
         { type: "rocks", x: -23, z: -24, s: 1.5 },
         { type: "rocks", x: -19.5, z: -27.5, s: 1.0 },
